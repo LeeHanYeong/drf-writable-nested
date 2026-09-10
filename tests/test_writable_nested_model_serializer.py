@@ -967,6 +967,27 @@ class WritableNestedModelSerializerTest(TestCase):
         # Sites shouldn't be deleted either as it is M2M
         self.assertEqual(models.Site.objects.count(), 3)
 
+    def test_create_another_user_with_polymorphic_access_key(self):
+        data = self.get_another_initial_data()
+        data['another_profile']['another_access_key']['resourcetype'] = (
+            'AccessKeySerializer'
+        )
+
+        serializer = serializers.AnotherUserSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        self.assertEqual(user.anotherprofile.access_key.key, 'key')
+
+    def test_create_another_user_with_unknown_polymorphic_resource_type(self):
+        data = self.get_another_initial_data()
+        data['another_profile']['another_access_key']['resourcetype'] = 'Unknown'
+
+        serializer = serializers.AnotherUserSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        with self.assertRaises(ValidationError):
+            serializer.save()
+
     def test_create_with_html_input_data(self):
         """Serializer should not fail if request type is multipart
         """
@@ -1072,4 +1093,5 @@ class WritableNestedModelSerializerAPITest(APITestCase):
         update_serializer.is_valid(raise_exception=True)
         user = update_serializer.save()
         self.assertEqual(user.profile.avatars.count(), 3)
+
 

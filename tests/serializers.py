@@ -47,6 +47,21 @@ class AccessKeySerializer(serializers.ModelSerializer):
         fields = ('pk', 'key',)
 
 
+class PolymorphicAccessKeySerializer(AccessKeySerializer):
+    """Mimics the duck-typed protocol used by third-party polymorphic
+    serializers (e.g. rest_polymorphic.serializers.PolymorphicSerializer):
+    resolve the concrete serializer to save with based on a `resourcetype`
+    value in the incoming data.
+    """
+    resource_type_field_name = 'resourcetype'
+
+    def _get_serializer_from_resource_type(self, resource_type):
+        if resource_type not in (None, 'AccessKeySerializer'):
+            raise ValidationError(
+                {'resourcetype': [f'Unknown resource type: {resource_type}']})
+        return AccessKeySerializer()
+
+
 class ProfileSerializer(WritableNestedModelSerializer):
     # Direct ManyToMany relation
     sites = SiteSerializer(many=True)
@@ -158,7 +173,7 @@ class AnotherProfileSerializer(WritableNestedModelSerializer):
     another_avatars = AnotherAvatarSerializer(source='avatars', many=True)
 
     # Direct FK relation
-    another_access_key = AccessKeySerializer(
+    another_access_key = PolymorphicAccessKeySerializer(
         source='access_key', allow_null=True)
 
     class Meta:
